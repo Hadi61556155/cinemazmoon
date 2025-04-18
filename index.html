@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سینمازمون | بازی کوییز فیلمی</title>
+    <style>
+        /* استایل‌های پایه */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #6e48aa, #9d50bb);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            width: 80%;
+        }
+        
+        button:hover {
+            background: #ff8e8e;
+            transform: scale(1.05);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        input {
+            padding: 10px;
+            margin: 10px;
+            width: 80%;
+            border-radius: 50px;
+            border: none;
+        }
+        
+        /* استایل‌های انیمیشن */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        @keyframes timerFlash {
+            0%, 100% { color: #FFD700; }
+            50% { color: #ff6b6b; }
+        }
+        
+        /* استایل‌های کامپوننت‌ها */
+        #timer {
+            font-size: 24px;
+            color: #FFD700;
+            margin: 15px 0;
+            animation: timerFlash 1s infinite;
+        }
+        
+        .correct {
+            background: #4CAF50 !important;
+            animation: pulse 0.5s;
+        }
+        
+        .wrong {
+            background: #f44336 !important;
+            animation: shake 0.5s;
+        }
+        
+        .coin {
+            color: gold;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+        }
+        
+        .ad-btn {
+            background: #FFA500 !important;
+        }
+        
+        .question-card {
+            animation: fadeIn 0.5s;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        
+        /* استایل‌های بخش رقابت */
+        .difficulty-btns {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .difficulty-btn {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            min-width: 80px;
+        }
+        
+        .easy { background: #4CAF50; }
+        .medium { background: #FFC107; color: #000; }
+        .hard { background: #F44336; }
+        
+        .share-code {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        
+        #vs-container {
+            font-size: 24px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        #user-score, #ai-score {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        /* استایل جدول رتبه‌بندی */
+        #ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        #ranking-table th, #ranking-table td {
+            padding: 8px;
+            border-bottom: 1px solid #444;
+        }
+        
+        #ranking-table tr:hover {
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- صفحه ثبت نام -->
+        <div id="login-screen">
+            <h1>🎮 ثبت نام در سینمازمون</h1>
+            <input type="text" id="username-input" placeholder="نام نمایشی خود را وارد کنید">
+            <button onclick="register()">شروع بازی</button>
+        </div>
+
+        <!-- صفحه اصلی -->
+        <div id="main-screen" class="hidden">
+            <h1>سلام <span id="display-username"></span>! 👋</h1>
+            <p>سکه‌های شما: <span id="coin-count" class="coin">10</span> 🪙</p>
+            <button class="ad-btn" onclick="watchAd()">📺 تماشای تبلیغ (+۲ سکه)</button>
+            
+            <div class="difficulty-btns">
+                <h3 style="width:100%">حالت بازی:</h3>
+                <button class="difficulty-btn easy" onclick="startPractice('easy')">تمرین (آسان)</button>
+                <button class="difficulty-btn medium" onclick="startPractice('medium')">تمرین (متوسط)</button>
+                <button class="difficulty-btn hard" onclick="startPractice('hard')">تمرین (سخت)</button>
+                <button class="difficulty-btn" style="background:#6e48aa" onclick="showCompetitionMenu()">رقابت با کامپیوتر</button>
+            </div>
+            
+            <button id="leaderboard-btn" onclick="showLeaderboard()">جدول رقابت هفتگی</button>
+            <button id="settings-btn" onclick="showSettings()">تنظیمات</button>
+            
+            <div id="ranking" class="hidden">
+                <h2>🏆 رتبه‌بندی</h2>
+                <table id="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>رتبه</th>
+                            <th>نام کاربر</th>
+                            <th>امتیاز</th>
+                            <th>سکه</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- صفحه انتخاب سطح دشواری برای رقابت -->
+        <div id="competition-menu" class="hidden">
+            <h2>⚔️ رقابت با کامپیوتر</h2>
+            <p>سطح دشواری رقیب کامپیوتری را انتخاب کنید:</p>
+            <div class="difficulty-btns">
+                <button class="difficulty-btn easy" onclick="startCompetition('easy')">آسان (۱ سکه)</button>
+                <button class="difficulty-btn medium" onclick="startCompetition('medium')">متوسط (۲ سکه)</button>
+                <button class="difficulty-btn hard" onclick="startCompetition('hard')">سخت (۳ سکه)</button>
+            </div>
+            <button onclick="backToMain()">بازگشت</button>
+        </div>
+
+        <!-- صفحه تنظیمات -->
+        <div id="settings-screen" class="hidden">
+            <h2>⚙️ تنظیمات</h2>
+            <label for="category-select">دسته‌بندی مورد علاقه:</label>
+            <select id="category-select">
+                <option value="all">همه دسته‌ها</option>
+                <option value="iranian">فیلم‌های ایرانی</option>
+                <option value="foreign">فیلم‌های خارجی</option>
+            </select>
+            <button onclick="saveSettings()">ذخیره تنظیمات</button>
+            <button onclick="backToMain()">بازگشت</button>
+        </div>
+
+        <!-- صفحه بازی -->
+        <div id="game-screen" class="hidden">
+            <div class="question-card">
+                <div id="timer">زمان: ۱۵ ثانیه</div>
+                <div id="question"></div>
+            </div>
+            <div id="options"></div>
+            <div id="score">امتیاز شما: 0</div>
+            <div id="game-mode"></div>
+        </div>
+
+        <!-- صفحه نتیجه -->
+        <div id="result-screen" class="hidden">
+            <h2 id="result-title"></h2>
+            <div id="vs-container" class="hidden">
+                <span id="user-score">0</span> 🆚 <span id="ai-score">0</span>
+            </div>
+            <p id="result-message"></p>
+            <div class="share-code" id="share-code"></div>
+            <button onclick="backToMain()">بازگشت به صفحه اصلی</button>
+        </div>
+
+        <!-- صفحه جدول رقابت -->
+        <div id="leaderboard-screen" class="hidden">
+            <h2>🏆 جدول رقابت هفتگی</h2>
+            <table id="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>رتبه</th>
+                        <th>نام کاربر</th>
+                        <th>امتیاز شما</th>
+                        <th>امتیاز کامپیوتر</th>
+                        <th>تاریخ</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+            <button onclick="backToMain()">بازگشت</button>
+        </div>
+    </div>
+
+    <script>
+        // ██████████████████████████████████████████████████████████████████████
+        // ███ سیستم ذخیره‌سازی و داده‌ها ███
+        // ██████████████████████████████████████████████████████████████████████
+        
+        // داده‌های کاربران
+        let users = JSON.parse(localStorage.getItem('quizUsers')) || [];
+        let currentUser = null;
+        let selectedCategory = 'all';
+        let currentGameMode = 'practice'; // practice | competition
+        let currentDifficulty = 'medium';
+        
+        // سوالات بازی
+        const questions = {
+            iranian: [
+                {
+                    question: "کارگردان فیلم «اخراجی‌ها» کیست؟",
+                    options: ["مسعود دهنمکی", "تهمینه میلانی", "اصغر فرهادی", "سعید روستایی"],
+                    answer: 0
+                },
+                {
+                    question: "بازیگر نقش اصلی فیلم «متری شیش و نیم» کیست؟",
+                    options: ["پیمان معادی", "نوید محمدزاده", "پرویز پرستویی", "شهاب حسینی"],
+                    answer: 1
+                },
+                {
+                    question: "فیلم «حوض نقاشی» ساخته کدام کارگردان است؟",
+                    options: ["محمدرضا هنرمند", "ابراهیم حاتمی‌کیا", "مجید مجیدی", "علی حاتمی"],
+                    answer: 3
+                },
+                {
+                    question: "کدام فیلم درباره جنگ ایران و عراق نیست؟",
+                    options: ["ایستاده در غبار", "چ", "شیار 143", "جدایی نادر از سیمین"],
+                    answer: 3
+                },
+                {
+                    question: "برنده سیمرغ بلورین بهترین بازیگر مرد در چهلمین دوره جشنواره فیلم فجر چه کسی بود؟",
+                    options: ["نوید محمدزاده", "پیمان معادی", "شهاب حسینی", "علی نصیریان"],
+                    answer: 0
+                }
+            ],
+            foreign: [
+                {
+                    question: "کارگردان فیلم «پاراسایت» کیست؟",
+                    options: ["کریستوفر نولان", "بونگ جون هو", "مارتین اسکورسیزی", "کوئنتین تارانتینو"],
+                    answer: 1
+                },
+                {
+                    question: "کدام فیلم برنده اسکار بهترین فیلم در سال 2023 شد؟",
+                    options: ["همه چیز در همه جا در یک زمان", "تار", "فتح", "بانگوی نشده"],
+                    answer: 2
+                },
+                {
+                    question: "بازیگر نقش جوكر در فیلم 2019 کیست؟",
+                    options: ["هیت لجر", "جک نیکلسون", "خواکین فینیکس", "جارد لتو"],
+                    answer: 2
+                },
+                {
+                    question: "کدام فیلم کوتاه ترین زمان اسکار بهترین فیلم را دارد؟",
+                    options: ["برادران کوئن", "ماهrise", "پاراسایت", "شهر خدا"],
+                    answer: 2
+                },
+                {
+                    question: "کارگردان فیلم «کشتن یک آهو» کیست؟",
+                    options: ["کلینت ایستوود", "مارتین اسکورسیزی", "دیوید فینچر", "استیون اسپیلبرگ"],
+                    answer: 0
+                }
+            ]
+        };
+        
+        // جدول رقابت هفتگی
+        let weeklyLeaderboard = JSON.parse(localStorage.getItem('weeklyLB')) || [];
+
+        // ██████████████████████████████████████████████████████████████████████
+        // ███ سیستم کاربران و پروفایل ███
+        // ██████████████████████████████████████████████████████████████████████
+        
+        // ثبت نام کاربر جدید
+        function register() {
+            const username = document.getElementById("username-input").value.trim();
+            if (username.length < 3) {
+                alert("نام کاربری باید حداقل 3 حرف باشد!");
+                return;
+            }
+
+            let user = users.find(u => u.username === username);
+            if (!user) {
+                user = { 
+                    username, 
+                    score: 0, 
+                    coins: 10,
+                    stats: {
+                        wins: 0,
+                        losses: 0,
+                        totalQuestions: 0,
+                        correctAnswers: 0
+                    }
+                };
+                users.push(user);
+                localStorage.setItem('quizUsers', JSON.stringify(users));
+            }
+
+            currentUser = user;
+            updateUI();
+            document.getElementById("login-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+        }
+        
+        // به‌روزرسانی اطلاعات کاربر
+        function updateUserData() {
+            users = users.map(u => 
+                u.username === currentUser.username ? currentUser : u
+            );
+            localStorage.setItem('quizUsers', JSON.stringify(users));
+        }
+        
+        // تماشای تبلیغ و دریافت سکه
+        function watchAd() {
+            currentUser.coins += 2;
+            updateUserData();
+            alert("✅ ۲ سکه به کیف پول شما اضافه شد!");
+            updateUI();
+        }
+
+        // ██████████████████████████████████████████████████████████████████████
+        // ███ سیستم بازی و رقابت ███
+        // ██████████████████████████████████████████████████████████████████████
+        
+        // شروع حالت تمرین
+        function startPractice(difficulty) {
+            if (currentUser.coins < 1) {
+                alert("سکه کافی ندارید! می‌توانید با تماشای تبلیغ سکه دریافت کنید.");
+                return;
+            }
+
+            currentGameMode = 'practice';
+            currentDifficulty = difficulty;
+            currentUser.coins -= 1;
+            updateUserData();
+
+            document.getElementById("main-screen").classList.add("hidden");
+            
+            let filteredQuestions = getFilteredQuestions();
+            const shuffledQuestions = filteredQuestions.sort(() => 0.5 - Math.random());
+            
+            startGame(shuffledQuestions.slice(0, 10));
+        }
+        
+        // نمایش منوی رقابت
+        function showCompetitionMenu() {
+            document.getElementById("main-screen").classList.add("hidden");
+            document.getElementById("competition-menu").classList.remove("hidden");
+        }
+        
+        // شروع رقابت با کامپیوتر
+        function startCompetition(difficulty) {
+            const coinCost = { easy: 1, medium: 2, hard: 3 }[difficulty];
+            
+            if (currentUser.coins < coinCost) {
+                alert(`سکه کافی ندارید! برای این سطح نیاز به ${coinCost} سکه دارید.`);
+                return;
+            }
+
+            currentGameMode = 'competition';
+            currentDifficulty = difficulty;
+            currentUser.coins -= coinCost;
+            updateUserData();
+
+            document.getElementById("competition-menu").classList.add("hidden");
+            
+            let filteredQuestions = getFilteredQuestions();
+            const shuffledQuestions = filteredQuestions.sort(() => 0.5 - Math.random());
+            
+            startGame(shuffledQuestions.slice(0, 10));
+        }
+        
+        // دریافت سوالات فیلتر شده بر اساس دسته‌بندی
+        function getFilteredQuestions() {
+            if (selectedCategory === 'all') {
+                return [...questions.iranian, ...questions.foreign];
+            } else {
+                return questions[selectedCategory];
+            }
+        }
+        
+        // شروع بازی اصلی
+        function startGame(quizQuestions) {
+            document.getElementById("game-screen").classList.remove("hidden");
+            document.getElementById("game-mode").textContent = 
+                currentGameMode === 'practice' ? 
+                `حالت تمرین (${currentDifficulty})` : 
+                `رقابت با کامپیوتر (${currentDifficulty})`;
+            
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let timeLeft = 15;
+            let timer;
+
+            function showQuestion() {
+                clearInterval(timer);
+                timeLeft = 15;
+                document.getElementById("timer").textContent = `زمان: ${timeLeft} ثانیه`;
+                
+                const q = quizQuestions[currentQuestionIndex];
+                document.getElementById("question").textContent = q.question;
+                
+                let optionsHTML = "";
+                q.options.forEach((option, index) => {
+                    optionsHTML += `<button onclick="answerQuestion(${index})">${option}</button>`;
+                });
+                document.getElementById("options").innerHTML = optionsHTML;
+                document.getElementById("score").textContent = `امتیاز شما: ${score}`;
+
+                timer = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById("timer").textContent = `زمان: ${timeLeft} ثانیه`;
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        highlightCorrectAnswer();
+                        setTimeout(nextQuestion, 1500);
+                    }
+                }, 1000);
+            }
+
+            window.answerQuestion = function(selectedIndex) {
+                clearInterval(timer);
+                const q = quizQuestions[currentQuestionIndex];
+                const buttons = document.querySelectorAll("#options button");
+                
+                // رنگ‌آمیزی گزینه‌ها
+                buttons.forEach((btn, index) => {
+                    if (index === q.answer) {
+                        btn.classList.add("correct");
+                    } else if (index === selectedIndex && index !== q.answer) {
+                        btn.classList.add("wrong");
+                    }
+                });
+
+                if (selectedIndex === q.answer) {
+                    score++;
+                    currentUser.stats.correctAnswers++;
+                }
+                
+                currentUser.stats.totalQuestions++;
+                setTimeout(nextQuestion, 1500);
+            };
+
+            function highlightCorrectAnswer() {
+                const q = quizQuestions[currentQuestionIndex];
+                const buttons = document.querySelectorAll("#options button");
+                buttons[q.answer].classList.add("correct");
+            }
+
+            function nextQuestion() {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < quizQuestions.length) {
+                    showQuestion();
+                } else {
+                    endGame(score, quizQuestions.length);
+                }
+            }
+
+            showQuestion();
+        }
+        
+        // پایان بازی
+        function endGame(score, totalQuestions) {
+            let message = "";
+            let shareCode = "";
+            
+            if (currentGameMode === 'practice') {
+                if (score >= 8) {
+                    currentUser.score += 2;
+                    message = `🎉 شما ${score} از ${totalQuestions} سوال را درست جواب دادید! (+2 امتیاز)`;
+                } else {
+                    message = `😢 شما ${score} از ${totalQuestions} سوال را درست جواب دادید.`;
+                }
+            } else {
+                // محاسبه امتیاز کامپیوتر
+                const aiScore = generateAIScore(currentDifficulty, score);
+                const isWin = score > aiScore;
+                
+                if (isWin) {
+                    currentUser.score += 10;
+                    currentUser.stats.wins++;
+                    message = `🎉 شما برنده شدید! امتیاز شما: ${score} | کامپیوتر: ${aiScore} (+10 امتیاز)`;
+                } else {
+                    currentUser.score += 1;
+                    currentUser.stats.losses++;
+                    message = `🤖 کامپیوتر برنده شد! امتیاز شما: ${score} | کامپیوتر: ${aiScore} (+1 امتیاز)`;
+                }
+                
+                // نمایش نتیجه رقابت
+                document.getElementById("vs-container").classList.remove("hidden");
+                document.getElementById("user-score").textContent = score;
+                document.getElementById("ai-score").textContent = aiScore;
+                
+                // ذخیره در جدول رقابت
+                weeklyLeaderboard.push({
+                    username: currentUser.username,
+                    userScore: score,
+                    aiScore: aiScore,
+                    date: new Date().toLocaleDateString('fa-IR'),
+                    difficulty: currentDifficulty,
+                    timestamp: Date.now()
+                });
+                
+                // فقط 50 رکورد آخر نگه دار
+                if (weeklyLeaderboard.length > 50) weeklyLeaderboard.shift();
+                localStorage.setItem('weeklyLB', JSON.stringify(weeklyLeaderboard));
+                
+                // ساخت کد اشتراک‌گذاری
+                shareCode = generateShareCode(score, aiScore);
+            }
+            
+            updateUserData();
+            document.getElementById("game-screen").classList.add("hidden");
+            document.getElementById("result-screen").classList.remove("hidden");
+            document.getElementById("result-title").textContent = 
+                currentGameMode === 'practice' ? "نتیجه تمرین" : "نتیجه رقابت";
+            document.getElementById("result-message").textContent = message;
+            
+            if (shareCode) {
+                document.getElementById("share-code").textContent = `کد اشتراک‌گذاری: ${shareCode}`;
+            } else {
+                document.getElementById("share-code").textContent = "";
+            }
+            
+            updateUI();
+        }
+        
+        // تولید امتیاز کامپیوتر
+        function generateAIScore(difficulty, userScore) {
+            let baseScore;
+            switch(difficulty) {
+                case 'easy':
+                    baseScore = Math.floor(Math.random() * 40) + 30; // 30-70
+                    return Math.min(baseScore, userScore + 5);
+                case 'hard':
+                    baseScore = Math.floor(Math.random() * 50) + 60; // 60-110
+                    return Math.max(baseScore, userScore - 5);
+                default: // medium
+                    baseScore = Math.floor(Math.random() * 60) + 40; // 40-100
+                    return baseScore;
+            }
+        }
+        
+        // ساخت کد اشتراک‌گذاری
+        function generateShareCode(userScore, aiScore) {
+            const data = {
+                u: currentUser.username,
+                s: userScore,
+                a: aiScore,
+                d: currentDifficulty,
+                t: new Date().toLocaleDateString('fa-IR')
+            };
+            return btoa(JSON.stringify(data));
+        }
+
+        // ██████████████████████████████████████████████████████████████████████
+        // ███ سیستم نمایش و رابط کاربری ███
+        // ██████████████████████████████████████████████████████████████████████
+        
+        // به‌روزرسانی UI
+        function updateUI() {
+            if (!currentUser) return;
+            
+            document.getElementById("display-username").textContent = currentUser.username;
+            document.getElementById("coin-count").textContent = currentUser.coins;
+            updateRanking();
+        }
+        
+        // نمایش جدول رتبه‌بندی
+        function updateRanking() {
+            const rankingBody = document.getElementById("ranking-body");
+            rankingBody.innerHTML = "";
+            
+            users.sort((a, b) => b.score - a.score).forEach((user, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${user.username}</td>
+                    <td>${user.score}</td>
+                    <td class="coin">${user.coins}</td>
+                `;
+                if (user.username === currentUser.username) {
+                    row.style.fontWeight = "bold";
+                    row.style.color = "#FFD700";
+                }
+                rankingBody.appendChild(row);
+            });
+        }
+        
+        // نمایش جدول رقابت هفتگی
+        function showLeaderboard() {
+            document.getElementById("main-screen").classList.add("hidden");
+            document.getElementById("leaderboard-screen").classList.remove("hidden");
+            
+            const leaderboardBody = document.getElementById("leaderboard-body");
+            leaderboardBody.innerHTML = "";
+            
+            // مرتب‌سازی بر اساس تاریخ (جدیدترین اول)
+            weeklyLeaderboard.sort((a, b) => b.timestamp - a.timestamp);
+            
+            weeklyLeaderboard.forEach((record, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${record.username}</td>
+                    <td>${record.userScore}</td>
+                    <td>${record.aiScore}</td>
+                    <td>${record.date}</td>
+                `;
+                if (record.username === currentUser.username) {
+                    row.style.fontWeight = "bold";
+                    row.style.color = "#FFD700";
+                }
+                leaderboardBody.appendChild(row);
+            });
+        }
+        
+        // نمایش تنظیمات
+        function showSettings() {
+            document.getElementById("main-screen").classList.add("hidden");
+            document.getElementById("settings-screen").classList.remove("hidden");
+            document.getElementById("category-select").value = selectedCategory;
+        }
+        
+        // ذخیره تنظیمات
+        function saveSettings() {
+            selectedCategory = document.getElementById("category-select").value;
+            backToMain();
+        }
+        
+        // بازگشت به صفحه اصلی
+        function backToMain() {
+            document.getElementById("competition-menu").classList.add("hidden");
+            document.getElementById("settings-screen").classList.add("hidden");
+            document.getElementById("result-screen").classList.add("hidden");
+            document.getElementById("leaderboard-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+            document.getElementById("ranking").classList.add("hidden");
+            document.getElementById("vs-container").classList.add("hidden");
+            updateUI();
+        }
+    </script>
+</body>
+</html>
