@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سینمازمون | بازی کوییز فیلم</title>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        @keyframes timerFlash {
+            0%, 100% { color: #FFD700; }
+            50% { color: #ff6b6b; }
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #6e48aa, #9d50bb);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease-out;
+        }
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            width: 80%;
+            animation: pulse 2s infinite;
+        }
+        button:hover {
+            background: #ff8e8e;
+            transform: scale(1.05);
+        }
+        .hidden {
+            display: none;
+        }
+        input {
+            padding: 10px;
+            margin: 10px;
+            width: 80%;
+            border-radius: 50px;
+            border: none;
+        }
+        #timer {
+            font-size: 24px;
+            color: #FFD700;
+            margin: 15px 0;
+            animation: timerFlash 1s infinite;
+        }
+        #category-select {
+            padding: 10px;
+            border-radius: 50px;
+            margin: 10px;
+            width: 80%;
+        }
+        .correct {
+            background: #4CAF50 !important;
+            animation: pulse 0.5s;
+        }
+        .wrong {
+            background: #f44336 !important;
+            animation: shake 0.5s;
+        }
+        .coin {
+            color: gold;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+        }
+        .ad-btn {
+            background: #FFA500 !important;
+        }
+        .question-card {
+            animation: fadeIn 0.5s;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- صفحه ثبت نام -->
+        <div id="login-screen">
+            <h1>🎮 ثبت نام در سینمازمون</h1>
+            <input type="text" id="username-input" placeholder="نام نمایشی خود را وارد کنید">
+            <button onclick="register()">شروع بازی</button>
+        </div>
+
+        <!-- صفحه اصلی -->
+        <div id="main-screen" class="hidden">
+            <h1>سلام <span id="display-username"></span>! 👋</h1>
+            <p>سکه‌های شما: <span id="coin-count" class="coin">10</span> 🪙</p>
+            <button class="ad-btn" onclick="watchAd()">📺 تماشای تبلیغ (+۲ سکه)</button>
+            <button id="practice-btn">حالت تمرین (۱ سکه)</button>
+            <button id="settings-btn">تنظیمات</button>
+            <div id="ranking">
+                <h2>🏆 رتبه‌بندی</h2>
+                <table id="ranking-table" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>رتبه</th>
+                            <th>نام کاربر</th>
+                            <th>امتیاز</th>
+                            <th>سکه</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- صفحه تنظیمات -->
+        <div id="settings-screen" class="hidden">
+            <h2>⚙️ تنظیمات</h2>
+            <label for="category-select">دسته‌بندی مورد علاقه:</label>
+            <select id="category-select">
+                <option value="all">همه دسته‌ها</option>
+                <option value="iranian">فیلم‌های ایرانی</option>
+                <option value="foreign">فیلم‌های خارجی</option>
+            </select>
+            <button onclick="saveSettings()">ذخیره</button>
+        </div>
+
+        <!-- صفحه بازی -->
+        <div id="game-screen" class="hidden">
+            <div class="question-card">
+                <div id="timer">زمان: ۱۵ ثانیه</div>
+                <div id="question"></div>
+            </div>
+            <div id="options"></div>
+            <div id="score">امتیاز شما: 0</div>
+        </div>
+
+        <!-- صفحه نتیجه -->
+        <div id="result-screen" class="hidden">
+            <h2 id="result-title"></h2>
+            <p id="result-message"></p>
+            <button onclick="backToMain()">بازگشت به صفحه اصلی</button>
+        </div>
+    </div>
+
+    <script>
+        // داده‌های کاربران
+        let users = JSON.parse(localStorage.getItem('quizUsers')) || [];
+        let currentUser = null;
+        let selectedCategory = 'all';
+
+        // سوالات
+        const questions = {
+            iranian: [
+                {
+                    question: "کارگردان فیلم «اخراجی‌ها» کیست؟",
+                    options: ["مسعود دهنمکی", "تهمینه میلانی", "اصغر فرهادی", "سعید روستایی"],
+                    answer: 0
+                },
+                {
+                    question: "بازیگر نقش اصلی فیلم «متری شیش و نیم» کیست؟",
+                    options: ["پیمان معادی", "نوید محمدزاده", "پرویز پرستویی", "شهاب حسینی"],
+                    answer: 1
+                }
+            ],
+            foreign: [
+                {
+                    question: "کارگردان فیلم «پاراسایت» کیست؟",
+                    options: ["کریستوفر نولان", "بونگ جون هو", "مارتین اسکورسیزی", "کوئنتین تارانتینو"],
+                    answer: 1
+                },
+                {
+                    question: "کدام فیلم برنده اسکار بهترین فیلم در سال 2023 شد؟",
+                    options: ["همه چیز در همه جا در یک زمان", "تار", "فتح", "بانگوی نشده"],
+                    answer: 2
+                }
+            ]
+        };
+
+        // تماشای تبلیغ
+        function watchAd() {
+            currentUser.coins += 2;
+            updateUserData();
+            alert("✅ ۲ سکه به کیف پول شما اضافه شد!");
+            updateUI();
+        }
+
+        // ثبت نام کاربر
+        function register() {
+            const username = document.getElementById("username-input").value.trim();
+            if (username.length < 3) {
+                alert("نام کاربری باید حداقل 3 حرف باشد!");
+                return;
+            }
+
+            let user = users.find(u => u.username === username);
+            if (!user) {
+                user = { username, score: 0, coins: 10 };
+                users.push(user);
+                localStorage.setItem('quizUsers', JSON.stringify(users));
+            }
+
+            currentUser = user;
+            updateUI();
+            document.getElementById("login-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+        }
+
+        // شروع حالت تمرین
+        function startPractice() {
+            if (currentUser.coins < 1) {
+                alert("سکه کافی ندارید! می‌توانید با تماشای تبلیغ سکه دریافت کنید.");
+                return;
+            }
+
+            currentUser.coins -= 1;
+            updateUserData();
+
+            document.getElementById("main-screen").classList.add("hidden");
+            
+            let filteredQuestions = [];
+            if (selectedCategory === 'all') {
+                filteredQuestions = [...questions.iranian, ...questions.foreign];
+            } else {
+                filteredQuestions = questions[selectedCategory];
+            }
+
+            const shuffledQuestions = filteredQuestions.sort(() => 0.5 - Math.random());
+            startQuiz(shuffledQuestions.slice(0, 10), true);
+        }
+
+        // اجرای کوییز
+        function startQuiz(quizQuestions, isPractice = false) {
+            document.getElementById("game-screen").classList.remove("hidden");
+            
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let timeLeft = 15;
+            let timer;
+
+            function showQuestion() {
+                clearInterval(timer);
+                timeLeft = 15;
+                document.getElementById("timer").textContent = `زمان: ${timeLeft} ثانیه`;
+                
+                const q = quizQuestions[currentQuestionIndex];
+                document.getElementById("question").textContent = q.question;
+                
+                let optionsHTML = "";
+                q.options.forEach((option, index) => {
+                    optionsHTML += `<button onclick="answerQuestion(${index})">${option}</button>`;
+                });
+                document.getElementById("options").innerHTML = optionsHTML;
+                document.getElementById("score").textContent = `امتیاز شما: ${score}`;
+
+                timer = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById("timer").textContent = `زمان: ${timeLeft} ثانیه`;
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        highlightCorrectAnswer();
+                        setTimeout(nextQuestion, 1500);
+                    }
+                }, 1000);
+            }
+
+            window.answerQuestion = function(selectedIndex) {
+                clearInterval(timer);
+                const q = quizQuestions[currentQuestionIndex];
+                const buttons = document.querySelectorAll("#options button");
+                
+                // رنگ‌آمیزی گزینه‌ها
+                buttons.forEach((btn, index) => {
+                    if (index === q.answer) {
+                        btn.classList.add("correct");
+                    } else if (index === selectedIndex && index !== q.answer) {
+                        btn.classList.add("wrong");
+                    }
+                });
+
+                if (selectedIndex === q.answer) {
+                    score++;
+                }
+
+                setTimeout(nextQuestion, 1500);
+            };
+
+            function highlightCorrectAnswer() {
+                const q = quizQuestions[currentQuestionIndex];
+                const buttons = document.querySelectorAll("#options button");
+                buttons[q.answer].classList.add("correct");
+            }
+
+            function nextQuestion() {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < quizQuestions.length) {
+                    showQuestion();
+                } else {
+                    endGame(score, isPractice);
+                }
+            }
+
+            showQuestion();
+        }
+
+        // پایان بازی
+        function endGame(score, isPractice) {
+            let message = "";
+            
+            if (isPractice) {
+                if (score >= 8) {
+                    currentUser.score += 2;
+                    message = `🎉 شما ${score} از 10 سوال را درست جواب دادید! (+2 امتیاز)`;
+                } else {
+                    message = `😢 شما ${score} از 10 سوال را درست جواب دادید.`;
+                }
+            }
+
+            updateUserData();
+            document.getElementById("game-screen").classList.add("hidden");
+            document.getElementById("result-screen").classList.remove("hidden");
+            document.getElementById("result-title").textContent = "نتیجه بازی";
+            document.getElementById("result-message").textContent = message;
+            
+            updateUI();
+        }
+
+        // به‌روزرسانی داده کاربر
+        function updateUserData() {
+            users = users.map(u => 
+                u.username === currentUser.username ? currentUser : u
+            );
+            localStorage.setItem('quizUsers', JSON.stringify(users));
+        }
+
+        // بازگشت به صفحه اصلی
+        function backToMain() {
+            document.getElementById("result-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+        }
+
+        // تنظیمات
+        function showSettings() {
+            document.getElementById("main-screen").classList.add("hidden");
+            document.getElementById("settings-screen").classList.remove("hidden");
+        }
+
+        function saveSettings() {
+            selectedCategory = document.getElementById("category-select").value;
+            document.getElementById("settings-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+        }
+
+        // آپدیت UI
+        function updateUI() {
+            document.getElementById("display-username").textContent = currentUser.username;
+            document.getElementById("coin-count").textContent = currentUser.coins;
+            updateRanking();
+        }
+
+        // رتبه‌بندی
+        function updateRanking() {
+            const rankingBody = document.getElementById("ranking-body");
+            rankingBody.innerHTML = "";
+            
+            users.sort((a, b) => b.score - a.score).forEach((user, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${user.username}</td>
+                    <td>${user.score}</td>
+                    <td class="coin">${user.coins}</td>
+                `;
+                if (user.username === currentUser.username) {
+                    row.style.fontWeight = "bold";
+                    row.style.color = "#FFD700";
+                }
+                rankingBody.appendChild(row);
+            });
+        }
+
+        // Event Listeners
+        document.getElementById("practice-btn").addEventListener("click", startPractice);
+        document.getElementById("settings-btn").addEventListener("click", showSettings);
+    </script>
+</body>
+</html>
